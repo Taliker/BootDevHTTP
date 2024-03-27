@@ -1,14 +1,31 @@
 package main
 
 import (
+	"github.com/Taliker/BootDevHTTP/api"
 	"log"
 	"net/http"
 )
 
+const (
+	// PORT is the port number
+	PORT = ":8080"
+	// DIR is the directory of the static files
+	DIR = "./static"
+)
+
 func main() {
+	apiCfg := &api.ApiConfig{}
 	mux := http.NewServeMux()
+	mux.Handle("GET /app/", apiCfg.MiddlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(DIR)))))
+	mux.HandleFunc("GET /metrics", apiCfg.MiddlewareMetrics)
+	mux.HandleFunc("GET /reset", apiCfg.MiddlewareMetricsReset)
+	mux.HandleFunc("GET /healthz", api.HealthHandler)
 	corsMux := middlewareCORS(mux)
-	log.Fatal(http.ListenAndServe(":8080", corsMux))
+	srv := &http.Server{
+		Addr:    PORT,
+		Handler: corsMux,
+	}
+	log.Fatal(srv.ListenAndServe())
 }
 
 func middlewareCORS(next http.Handler) http.Handler {
